@@ -1,0 +1,286 @@
+local player = game.Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-- Remove old GUI (optional)
+local existingGui = playerGui:FindFirstChild("CompactMenu")
+if existingGui then
+	existingGui:Destroy()
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CompactMenu"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local UserInputService = game:GetService("UserInputService")
+
+-- Main window creation function
+local function CreateWindow(titleText, pos)
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(0, 200, 0, 260)
+	frame.Position = pos or UDim2.new(0.5, -100, 0, 10)
+	frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+	frame.BorderSizePixel = 0
+	frame.Parent = screenGui
+	Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 6)
+
+	local shadow = Instance.new("ImageLabel")
+	shadow.Name = "Shadow"
+	shadow.Image = "rbxassetid://1316045217"
+	shadow.Size = UDim2.new(1, 30, 1, 30)
+	shadow.Position = UDim2.new(0, -15, 0, -15)
+	shadow.BackgroundTransparency = 1
+	shadow.ImageTransparency = 0.5
+	shadow.ZIndex = 0
+	shadow.Parent = frame
+
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1, -40, 0, 30)
+	title.Position = UDim2.new(0, 10, 0, 8)
+	title.Text = titleText or "Window"
+	title.Font = Enum.Font.GothamMedium
+	title.TextSize = 13
+	title.TextColor3 = Color3.fromRGB(255, 255, 255)
+	title.BackgroundTransparency = 1
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.ZIndex = 2
+	title.Parent = frame
+
+	local minimizeBtn = Instance.new("TextButton")
+	minimizeBtn.Size = UDim2.new(0, 20, 0, 20)
+	minimizeBtn.Position = UDim2.new(1, -30, 0, 10)
+	minimizeBtn.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+	minimizeBtn.Text = "-"
+	minimizeBtn.Font = Enum.Font.GothamBold
+	minimizeBtn.TextSize = 14
+	minimizeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	minimizeBtn.ZIndex = 3
+	minimizeBtn.AutoButtonColor = true
+	minimizeBtn.Parent = frame
+	Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(1, 0)
+
+	local creditBtn = Instance.new("TextButton")
+	creditBtn.Size = UDim2.new(1, -20, 0, 20)
+	creditBtn.Position = UDim2.new(0, 10, 1, -25)
+	creditBtn.Text = "Your Link Here"
+	creditBtn.Font = Enum.Font.GothamMedium
+	creditBtn.TextSize = 13
+	creditBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+	creditBtn.BackgroundTransparency = 1
+	creditBtn.TextXAlignment = Enum.TextXAlignment.Left
+	creditBtn.ZIndex = 2
+	creditBtn.AutoButtonColor = true
+	creditBtn.Parent = frame
+
+	creditBtn.MouseButton1Click:Connect(function()
+		if setclipboard then
+			setclipboard("https://example.com")
+		end
+	end)
+
+	local elements = {}
+
+	local function updateFrameSize()
+		local spacing = 10
+		local currentY = 45
+		for _, el in ipairs(elements) do
+			if el:IsA("GuiObject") and el.Visible then
+				el.Position = UDim2.new(0, 10, 0, currentY)
+				currentY += el.Size.Y.Offset + spacing
+			end
+		end
+		frame.Size = UDim2.new(0, 200, 0, currentY + 40)
+	end
+
+	local function CreateTextbox(placeholder, callback)
+		local tb = Instance.new("TextBox")
+		tb.PlaceholderText = placeholder or ""
+		tb.Size = UDim2.new(1, -20, 0, 28)
+		tb.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+		tb.TextColor3 = Color3.fromRGB(255, 255, 255)
+		tb.Text = ""
+		tb.ClearTextOnFocus = false
+		tb.Font = Enum.Font.Gotham
+		tb.TextSize = 14
+		tb.ZIndex = 2
+		tb.Parent = frame
+		Instance.new("UICorner", tb).CornerRadius = UDim.new(0, 6)
+
+		tb.FocusLost:Connect(function(enterPressed)
+			if enterPressed and callback then
+				callback(tb.Text)
+			end
+		end)
+
+		table.insert(elements, tb)
+		updateFrameSize()
+		return tb
+	end
+
+	local function CreateToggle(text, callback, waitTime)
+		waitTime = waitTime or 0.1
+		local btn = Instance.new("TextButton")
+		btn.Text = "[ ] " .. (text or "Toggle")
+		btn.Size = UDim2.new(1, -20, 0, 28)
+		btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+		btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+		btn.Font = Enum.Font.Gotham
+		btn.TextSize = 14
+		btn.ZIndex = 2
+		btn.AutoButtonColor = true
+		btn.Parent = frame
+		Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+		local state = false
+		local running = false
+		local thread
+
+		btn.MouseButton1Click:Connect(function()
+			state = not state
+			btn.Text = (state and "[✔]" or "[ ]") .. " " .. text
+
+			if state then
+				running = true
+				thread = coroutine.create(function()
+					while running do
+						if callback then callback(state) end
+						task.wait(waitTime)
+					end
+				end)
+				coroutine.resume(thread)
+			else
+				running = false
+			end
+		end)
+
+		table.insert(elements, btn)
+		updateFrameSize()
+		return btn
+	end
+
+	local function CreateButton(text, callback)
+		local btn = Instance.new("TextButton")
+		btn.Text = text or "Button"
+		btn.Size = UDim2.new(1, -20, 0, 30)
+		btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+		btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+		btn.Font = Enum.Font.Gotham
+		btn.TextSize = 14
+		btn.AutoButtonColor = false
+		btn.ZIndex = 2
+		btn.Parent = frame
+		Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+		btn.MouseEnter:Connect(function()
+			btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+		end)
+		btn.MouseLeave:Connect(function()
+			btn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+		end)
+		btn.MouseButton1Down:Connect(function()
+			btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+		end)
+		btn.MouseButton1Up:Connect(function()
+			btn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+		end)
+		btn.MouseButton1Click:Connect(function()
+			if callback then callback() end
+		end)
+
+		table.insert(elements, btn)
+		updateFrameSize()
+		return btn
+	end
+
+	minimizeBtn.MouseButton1Click:Connect(function()
+		local minimized = frame.Size.Y.Offset > 50
+
+		if minimized then
+			for _, el in ipairs(elements) do
+				el.Visible = false
+			end
+			creditBtn.Visible = false
+			frame.Size = UDim2.new(0, 200, 0, 50)
+		else
+			for _, el in ipairs(elements) do
+				el.Visible = true
+			end
+			creditBtn.Visible = true
+			updateFrameSize()
+		end
+	end)
+
+	-- Drag system com suporte a toque e mouse
+	local dragging = false
+	local dragInput = nil
+	local dragStart = nil
+	local startPos = nil
+	local dragArea = title
+
+	local function update(input)
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(
+			startPos.X.Scale, startPos.X.Offset + delta.X,
+			startPos.Y.Scale, startPos.Y.Offset + delta.Y
+		)
+	end
+
+	dragArea.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+			dragInput = input
+
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then
+					dragging = false
+				end
+			end)
+		end
+	end)
+
+	dragArea.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+			dragInput = input
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if input == dragInput and dragging then
+			update(input)
+		end
+	end)
+
+	return {
+		Frame = frame,
+		CreateTextbox = CreateTextbox,
+		CreateToggle = CreateToggle,
+		CreateButton = CreateButton,
+		UpdateSize = updateFrameSize,
+		Elements = elements
+	}
+end
+
+-- Store created windows
+local windows = {}
+
+-- Function to create and position a new window
+local function CreateNewWindow(title)
+	local baseXOffset = 10
+	local spacing = 10
+	local windowWidth = 200
+	local count = #windows
+
+	local posX = baseXOffset + (windowWidth + spacing) * count
+	local newWindow = CreateWindow(title, UDim2.new(0, posX, 0, 10))
+	table.insert(windows, newWindow)
+	return newWindow
+end
+
+-- Example usage
+local win1 = CreateNewWindow("Window 1")
+
+win1.CreateButton("Boost Speed", function()
+	print("Button clicked!")
+end)
